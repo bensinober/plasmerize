@@ -37,6 +37,7 @@ echo -n "PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc
 
 **OpenCV**
 
+```
 go get -u -d gocv.io/x/gocv
 cd $GOPATH/src/gocv.io/x/gocv
 make install
