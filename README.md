@@ -18,7 +18,7 @@ In short, it is a program to:
 ## Ubuntu install:
 
 ```
-sudo apt-get update && install -y git zynaddsubfx timidity linux-lowlatency qsynth sfarkxtc libglib2.0-dev libportmidi-dev
+sudo apt-get update && sudo apt-get install -y git zynaddsubfx timidity linux-lowlatency qsynth sfarkxtc libglib2.0-dev libportmidi-dev
 ```
 make sure user is allowed access to usb and audio devices:
 ```
@@ -27,23 +27,33 @@ sudo usermod -a -G plugdev,audio,dialout <user>
 
 ## Golang and OpenCV
 
-Go 1.13.1
+**Go 1.13.1**
 
-	wget https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz
-	sudo tar -C /usr/local -xvf go1.13.1.linux-amd64.tar.gz
-	echo -n "PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc
+```
+wget https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz
+sudo tar -C /usr/local -xvf go1.13.1.linux-amd64.tar.gz
+echo -n "PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc
+```
 
-OpenCV
-	go get -u -d gocv.io/x/gocv
-	cd $GOPATH/src/gocv.io/x/gocv
-	make install
+**OpenCV**
 
-RtMidi
-    go get -u gitlab.com/gomidi/midi
-	go get -u gitlab.com/bensinober/rtmididrv
+go get -u -d gocv.io/x/gocv
+cd $GOPATH/src/gocv.io/x/gocv
+make install
+```
+
+**RtMidi**
+
+```
+go get -u gitlab.com/gomidi/midi
+go get -u gitlab.com/bensinober/rtmididrv
+```
 
 ## Documentation
 
 run with a usb cam
-	go run plasma.go -cam=0
+```go run plasma.go -cam=0```
+
+run some test notes
+```go run plasma.go -test```
 
