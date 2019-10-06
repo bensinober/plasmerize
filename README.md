@@ -58,3 +58,18 @@ run with a usb cam
 run some test notes
 ```go run plasma.go -test```
 
+
+Start zynaddsubfx with a sample sound for real time midi instrument
+```
+zynaddsubfx -a -L /usr/share/yoshimi/banks/Arpeggios/0001-Arpeggio1.xiz
+```
+
+Optionally start virtual midi device
+```
+sudo modprobe snd-virmidi
+```
+
+Connect midi ports with aconnect
+```
+aconnect 24:0 129:0
+```
