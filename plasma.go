@@ -113,6 +113,13 @@ func (p *Plasmer) handlePressedNotes() {
 				if p.Midi != nil {
 					p.Midi.NoteOn(note.Note, note.Velo)
 				}
+				if p.Dmx != nil {
+					c := math.Floor(float64(i) / 100 * 3) + 1 // get a dmx channel 1-4
+					v := note.Velo * 2
+					fmt.Printf("DMX channel %f, velo %d\n", c, v)
+					p.Dmx.NoteOn(uint8(c), v)
+				}
+
 				fmt.Printf("pressing note %d, velo %d\n", note.Note, note.Velo)
 			}
 		}
