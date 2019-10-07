@@ -157,12 +157,13 @@ func (p *Plasmer) readCam() {
 		//img.CopyTo(&img2)
 		gocv.Flip(img, &img2, 1)                                                   // flip horizontally
 		gocv.CvtColor(img2, &hueImg, gocv.ColorBGRToHSV)                           // convert to hue
-		gocv.Circle(&img2, image.Pt(320, 330), 68, color.RGBA{0, 0, 255, 0}, -1)   // exclude center
-		gocv.Circle(&hueImg, image.Pt(320, 330), 68, color.RGBA{0, 0, 255, 0}, -1) // exclude center
+		gocv.Circle(&img2, image.Pt(310, 270), 70, color.RGBA{0, 0, 255, 0}, -1)   // exclude center
+		gocv.Circle(&hueImg, image.Pt(310, 270), 70, color.RGBA{0, 0, 255, 0}, -1) // exclude center
 
 		// HUE-SATURATION-VUE spectrum: https://i.stack.imgur.com/gyuw4.png
 		// extract the pinkish red hue range to mask Mat
-		gocv.InRangeWithScalar(hueImg, gocv.NewScalar(150.0, 100.0, 250.0, 0.0), gocv.NewScalar(170.0, 255.0, 255.0, 0.0), &mask)
+		//gocv.InRangeWithScalar(hueImg, gocv.NewScalar(150.0, 100.0, 250.0, 0.0), gocv.NewScalar(170.0, 255.0, 255.0, 0.0), &mask)
+		gocv.InRangeWithScalar(hueImg, gocv.NewScalar(143.0, 50.0, 255.0, 0.0), gocv.NewScalar(144.0, 255.0, 255.0, 0.0), &mask)
 		ctrs := gocv.FindContours(mask, gocv.RetrievalExternal, gocv.ChainApproxSimple)
 		fCtrs := filterContours(ctrs)
 		for _, ctr := range ctrs {
