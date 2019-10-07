@@ -19,6 +19,7 @@ import (
 
 type Plasmer struct {
 	Midi    *mid.Writer
+	Dmx     *mid.Writer
 	Cam     *gocv.VideoCapture
 	NotesOn map[uint8]midiNote
 	NotesIn chan map[uint8]midiNote
@@ -29,9 +30,8 @@ type midiNote struct {
 	Timer      *time.Timer
 }
 
-func newPlasmer(mw *mid.Writer, max int, cam *gocv.VideoCapture) *Plasmer {
+func newPlasmer(max int, cam *gocv.VideoCapture) *Plasmer {
 	return &Plasmer{
-		Midi:    mw,
 		Cam:     cam,
 		NotesOn: make(map[uint8]midiNote, max),
 		NotesIn: make(chan map[uint8]midiNote, max),
@@ -110,7 +110,9 @@ func (p *Plasmer) handlePressedNotes() {
 			} else {
 				note.Timer = timer
 				p.NotesOn[i] = note
-				p.Midi.NoteOn(note.Note, note.Velo)
+				if p.Midi != nil {
+					p.Midi.NoteOn(note.Note, note.Velo)
+				}
 				fmt.Printf("pressing note %d, velo %d\n", note.Note, note.Velo)
 			}
 		}
@@ -123,7 +125,9 @@ func (p *Plasmer) expireNotes() {
 			select {
 			case <-note.Timer.C:
 				fmt.Printf("releasing note %d\n", i)
-				p.Midi.NoteOff(i)
+				if p.Midi != nil {
+					p.Midi.NoteOff(i)
+				}
 				delete(p.NotesOn, i)
 			}
 		}
@@ -183,22 +187,26 @@ func (p *Plasmer) readCam() {
 }
 
 func main() {
-	cam := flag.String("cam", "", "address of webcam, http or id int")
 	max := flag.Int("max", 8, "max no of simultaneous notes")
+	camDev := flag.String("cam", "", "address of webcam, http or id int")
+	midDev := flag.String("mid", "", "Midi device ID")
+	dmxDev := flag.String("dmx", "", "DMX device ID")
 	test := flag.Bool("test", false, "run test mode")
 	flag.Parse()
+
+	/* webcam setup */
 	// device or url to mjpeg stream
 	// go run plasma.go -cam 0 / http://root:pass@192.168.1.2/mjpg/1/video.mjpg
 	var webcam *gocv.VideoCapture
-	if *cam != "" {
-		if i, err := strconv.Atoi(*cam); err == nil {
+	if *camDev != "" {
+		if i, err := strconv.Atoi(*camDev); err == nil {
 			webcam, err = gocv.OpenVideoCapture(i)
 			if err != nil {
 				fmt.Printf("Error opening video capture device: %v\n", err)
 				return
 			}
 		} else {
-			webcam, err = gocv.OpenVideoCapture(*cam)
+			webcam, err = gocv.OpenVideoCapture(*camDev)
 			if err != nil {
 				fmt.Printf("Error opening video capture device: %v\n", err)
 				return
@@ -208,27 +216,51 @@ func main() {
 	fmt.Println(webcam)
 	defer webcam.Close()
 
-	// midi setup
-	drv, err := driver.New()
-	if err != nil {
-		panic(err)
+	p := newPlasmer(*max, webcam)
+
+	if *midDev != "" {
+		i, _ := strconv.Atoi(*midDev)
+		drv, err := driver.New()
+		if err != nil {
+			panic(err)
+		}
+		defer drv.Close()
+		outs, err := drv.Outs()
+		//fmt.Printf("%v", outs)
+		if err != nil {
+			panic(err)
+		}
+		if err := outs[i].Open(); err != nil {
+			panic(err)
+		}
+		wr := mid.ConnectOut(outs[i])
+		wr.SetChannel(0)
+		p.Midi = wr
 	}
-	defer drv.Close()
-	outs, err := drv.Outs()
-	//fmt.Printf("%v", outs)
-	if err != nil {
-		panic(err)
+
+	if *dmxDev != "" {
+		i, _ := strconv.Atoi(*dmxDev)
+		drv, err := driver.New()
+		if err != nil {
+			panic(err)
+		}
+		defer drv.Close()
+		outs, err := drv.Outs()
+		//fmt.Printf("%v", outs)
+		if err != nil {
+			panic(err)
+		}
+		if err := outs[i].Open(); err != nil {
+			panic(err)
+		}
+		wr := mid.ConnectOut(outs[i])
+		wr.SetChannel(1)
+		p.Dmx = wr
 	}
-	if err := outs[0].Open(); err != nil {
-		panic(err)
-	}
-	midiWr := mid.ConnectOut(outs[0])
-	midiWr.SetChannel(0)
-	p := newPlasmer(midiWr, *max, webcam)
 
 	go p.handlePressedNotes()
 	go p.expireNotes()
-	if *cam != "" {
+	if *camDev != "" {
 		p.readCam()
 	}
 	if *test {
