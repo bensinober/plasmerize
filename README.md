@@ -8,6 +8,8 @@ In short, it is a program to:
 * correlate and triangulate significant touches
 * generate Midi Signals and send to Midi Through or device
 
+![](https://github.com/bensinober/plasmerize/doc/plasmaball.png | width=100)
+
 # Prerequisites
 
 * Golang
@@ -35,7 +37,7 @@ sudo tar -C /usr/local -xvf go1.13.1.linux-amd64.tar.gz
 echo -n "PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc
 ```
 
-**OpenCV**
+**OpenCV (Computer Vision)**
 
 ```
 go get -u -d gocv.io/x/gocv
@@ -43,7 +45,7 @@ cd $GOPATH/src/gocv.io/x/gocv
 make install
 ```
 
-**RtMidi**
+**RtMidi (Real-Time Midi)**
 
 ```
 go get -u gitlab.com/gomidi/midi
@@ -52,8 +54,8 @@ go get -u gitlab.com/bensinober/rtmididrv
 
 ## Documentation
 
-run with a usb cam
-```go run plasma.go -cam=0```
+run with a usb cam on usb port 0 and midi out on device 0, channel 1, and separate dmx out on device 0, channel 2 
+```go run plasma.go -cam=0 -mid=0 -dmx=0```
 
 run some test notes
 ```go run plasma.go -test```
@@ -61,7 +63,7 @@ run some test notes
 
 Start zynaddsubfx with a sample sound for real time midi instrument
 ```
-zynaddsubfx -a -L /usr/share/yoshimi/banks/Arpeggios/0001-Arpeggio1.xiz
+zynaddsubfx -a -L /usr/share/zynaddsubfx/banks/Arpeggios/0001-Arpeggio1.xiz
 ```
 
 Optionally start virtual midi device
@@ -73,3 +75,15 @@ Connect midi ports with aconnect
 ```
 aconnect 24:0 129:0
 ```
+
+## How does it work?
+
+The webcam sends still images to process with openCV, which converts, saturizes and lowers to hue image.
+
+The hue image is then filtered so a small range of intense pink/red pixels (=touches) are binarized to white.
+
+Countours are registered and trigonometry used to calculate angels and distance from centre of ball.
+
+The various touches are then transformed to midi signals and sent raw to any device given.
+
+Also a subset of angles (360 / 4) are sent to another channel for use by DMX, along with velocity.
