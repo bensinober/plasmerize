@@ -8,7 +8,7 @@ In short, it is a program to:
 * correlate and triangulate significant touches
 * generate Midi Signals and send to Midi Through or device
 
-![](https://github.com/bensinober/plasmerize/doc/plasmaball.png | width=100)
+![](https://github.com/bensinober/plasmerize/blob/master/doc/plasmaball.png|width=100)
 
 # Prerequisites
 
