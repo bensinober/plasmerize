@@ -12,14 +12,16 @@ import (
 
 	_ "net/http/pprof"
 
-	driver "gitlab.com/bensinober/rtmididrv"
-	"gitlab.com/gomidi/midi/mid"
+	midiwriter "gitlab.com/gomidi/midi/writer"
+	driver "gitlab.com/gomidi/rtmididrv"
+
+	//driver "gitlab.com/gomidi/midi/testdrv"
 	"gocv.io/x/gocv"
 )
 
 type Plasmer struct {
-	Midi    *mid.Writer
-	Dmx     *mid.Writer
+	Midi    midiwriter.ChannelWriter
+	Dmx     midiwriter.ChannelWriter
 	Cam     *gocv.VideoCapture
 	NotesOn map[uint8]midiNote
 	NotesIn chan map[uint8]midiNote
@@ -111,13 +113,13 @@ func (p *Plasmer) handlePressedNotes() {
 				note.Timer = timer
 				p.NotesOn[i] = note
 				if p.Midi != nil {
-					p.Midi.NoteOn(note.Note, note.Velo)
+					midiwriter.NoteOn(p.Midi, note.Note, note.Velo)
 				}
 				if p.Dmx != nil {
-					c := math.Floor(float64(i) / 100 * 3) + 1 // get a dmx channel 1-4
+					c := math.Floor(float64(i)/100*3) + 1 // get a dmx channel 1-4
 					v := note.Velo * 2
 					fmt.Printf("DMX channel %f, velo %d\n", c, v)
-					p.Dmx.NoteOn(uint8(c), v)
+					midiwriter.NoteOn(p.Dmx, uint8(c), v)
 				}
 
 				fmt.Printf("pressing note %d, velo %d\n", note.Note, note.Velo)
@@ -133,7 +135,7 @@ func (p *Plasmer) expireNotes() {
 			case <-note.Timer.C:
 				fmt.Printf("releasing note %d\n", i)
 				if p.Midi != nil {
-					p.Midi.NoteOff(i)
+					midiwriter.NoteOff(p.Midi, i)
 				}
 				delete(p.NotesOn, i)
 			}
@@ -158,8 +160,10 @@ func (p *Plasmer) readCam() {
 	defer mask.Close()
 	green := color.RGBA{0, 255, 0, 0}
 	for {
+		time.Sleep(time.Millisecond * 1) // delay to allow camera to sync
+
 		if ok := p.Cam.Read(&img); !ok {
-			fmt.Printf("Device closed: %v\n", p.Cam)
+			fmt.Printf("Device closed: %#v\n", p.Cam)
 			return
 		}
 		if img.Empty() {
@@ -174,7 +178,8 @@ func (p *Plasmer) readCam() {
 		// HUE-SATURATION-VUE spectrum: https://i.stack.imgur.com/gyuw4.png
 		// extract the pinkish red hue range to mask Mat
 		//gocv.InRangeWithScalar(hueImg, gocv.NewScalar(150.0, 100.0, 250.0, 0.0), gocv.NewScalar(170.0, 255.0, 255.0, 0.0), &mask)
-		gocv.InRangeWithScalar(hueImg, gocv.NewScalar(143.0, 50.0, 255.0, 0.0), gocv.NewScalar(144.0, 255.0, 255.0, 0.0), &mask)
+		//gocv.InRangeWithScalar(hueImg, gocv.NewScalar(143.0, 50.0, 255.0, 0.0), gocv.NewScalar(144.0, 255.0, 255.0, 0.0), &mask)
+		gocv.InRangeWithScalar(hueImg, gocv.NewScalar(165.0, 115.0, 115.0, 0.0), gocv.NewScalar(170.0, 255.0, 255.0, 0.0), &mask)
 		ctrs := gocv.FindContours(mask, gocv.RetrievalExternal, gocv.ChainApproxSimple)
 		fCtrs := filterContours(ctrs)
 		for _, ctr := range ctrs {
@@ -233,14 +238,16 @@ func main() {
 		}
 		defer drv.Close()
 		outs, err := drv.Outs()
-		//fmt.Printf("%v", outs)
+		fmt.Printf("%v", outs)
 		if err != nil {
-			panic(err)
+			fmt.Printf("MIDI ERROR: %v", err)
 		}
-		if err := outs[i].Open(); err != nil {
-			panic(err)
+		out := outs[i]
+		if err := out.Open(); err != nil {
+			fmt.Printf("MIDI OPEN ERROR: %v", err)
 		}
-		wr := mid.ConnectOut(outs[i])
+		defer out.Close()
+		wr := midiwriter.New(out)
 		wr.SetChannel(0)
 		p.Midi = wr
 	}
@@ -257,19 +264,18 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		if err := outs[i].Open(); err != nil {
+		out := outs[i]
+		if err := out.Open(); err != nil {
 			panic(err)
 		}
-		wr := mid.ConnectOut(outs[i])
+		defer out.Close()
+		wr := midiwriter.New(outs[i])
 		wr.SetChannel(1)
 		p.Dmx = wr
 	}
 
 	go p.handlePressedNotes()
 	go p.expireNotes()
-	if *camDev != "" {
-		p.readCam()
-	}
 	if *test {
 		window := gocv.NewWindow("plasma points detector")
 		img := gocv.NewMatWithSize(640, 480, gocv.MatTypeCV8U)
@@ -294,5 +300,8 @@ func main() {
 			}
 		}
 		time.Sleep(5 * time.Second) // for allowing channels to finish reading
+	}
+	if *camDev != "" {
+		p.readCam()
 	}
 }

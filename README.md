@@ -27,6 +27,8 @@ make sure user is allowed access to usb and audio devices:
 sudo usermod -a -G plugdev,audio,dialout <user>
 ```
 
+*NB* If you dont use low latency kernel drivers you'll need to insert some sleep to cam read loop
+
 ## Golang and OpenCV
 
 **Go 1.13.1**
@@ -49,12 +51,15 @@ make install
 
 ```
 go get -u gitlab.com/gomidi/midi
-go get -u gitlab.com/bensinober/rtmididrv
+go get -u gitlab.com/gomidi/midi/reader
+go get -u gitlab.com/gomidi/midi/writer
+go get -u gitlab.com/gomidi/rtmididrv
+#go get -u gitlab.com/bensinober/rtmididrv
 ```
 
 ## Documentation
 
-run with a usb cam on usb port 0 and midi out on device 0, channel 1, and separate dmx out on device 0, channel 2 
+run with a usb cam on usb port 0 and midi out on device 0, channel 1, and separate dmx out on device 0, channel 2
 ```go run plasma.go -cam=0 -mid=0 -dmx=0```
 
 run some test notes
