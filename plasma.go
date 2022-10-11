@@ -42,7 +42,8 @@ func newPlasmer(max int, cam *gocv.VideoCapture) *Plasmer {
 
 func findCentroid(img gocv.Mat, ctr []image.Point) image.Point {
 	mat := gocv.NewMatWithSize(img.Rows(), img.Cols(), gocv.MatTypeCV8U)
-	gocv.FillPoly(&mat, [][]image.Point{ctr}, color.RGBA{R: 255, G: 255, B: 255, A: 255})
+	pv := gocv.NewPointsVectorFromPoints([][]image.Point{ctr})
+	gocv.FillPoly(&mat, pv, color.RGBA{R: 255, G: 255, B: 255, A: 255})
 	m := gocv.Moments(mat, false) // binaryImage = false
 	cx := int(m["m10"] / m["m00"])
 	cy := int(m["m01"] / m["m00"])
@@ -89,12 +90,12 @@ func notesPressed(img gocv.Mat, pts [][]image.Point) map[uint8]midiNote {
 }
 
 // remove smaller contours within an X-sized area
-func filterContours(pts [][]image.Point) [][]image.Point {
+func filterContours(pv gocv.PointsVector) [][]image.Point {
 	minArea := 40.0
 	var filtered [][]image.Point
-	for _, c := range pts {
-
-		area := gocv.ContourArea(c)
+	for _, c := range pv.ToPoints() {
+		pv := gocv.NewPointVectorFromPoints(c)
+		area := gocv.ContourArea(pv)
 		if area > minArea {
 			filtered = append(filtered, c)
 		}
@@ -182,7 +183,7 @@ func (p *Plasmer) readCam() {
 		gocv.InRangeWithScalar(hueImg, gocv.NewScalar(165.0, 115.0, 115.0, 0.0), gocv.NewScalar(170.0, 255.0, 255.0, 0.0), &mask)
 		ctrs := gocv.FindContours(mask, gocv.RetrievalExternal, gocv.ChainApproxSimple)
 		fCtrs := filterContours(ctrs)
-		for _, ctr := range ctrs {
+		for _, ctr := range ctrs.ToPoints() {
 			gocv.Circle(&img2, (ctr[0]), 4, green, 2)
 		}
 
